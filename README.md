@@ -1,0 +1,5 @@
+# Babble
+
+Usage:
+
+    cargo run
