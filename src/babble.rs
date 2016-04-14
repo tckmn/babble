@@ -158,6 +158,8 @@ impl Babble {
                         arr.push(Value::num((Babble::letter_idx(ch3) * 25 +
                                              Babble::letter_idx(ch4)) as f64));
                     },
+                    // ZZ: a literal Z character
+                    'Z' => arr.push(Value::num('Z' as u8 as f64)),
                     _ => {}
                 }
             } else {
