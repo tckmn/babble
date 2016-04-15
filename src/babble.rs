@@ -75,8 +75,31 @@ impl Babble {
         // simply grab three letters and go from there
         let cmd: String = code.take(3).collect();
 
+        // check for primary, secondary, or result variable setting commands
+        if cmd.starts_with("PV") {
+            let pv = Babble::letter_idx(cmd.chars().last().unwrap());
+            return Some(box move |this| {
+                this.primary = pv;
+            });
+        } else if cmd.starts_with("SV") {
+            let sv = Babble::letter_idx(cmd.chars().last().unwrap());
+            return Some(box move |this| {
+                this.secondary = sv;
+            });
+        } else if cmd.starts_with("RV") {
+            let rv = Babble::letter_idx(cmd.chars().last().unwrap());
+            return Some(box move |this| {
+                this.result = rv;
+            });
+        }
+
         match &cmd[..] {
+            // literals .......................................................
+
+            // array / string literal
             "ARR" => Babble::parse_literal_array(&mut code),
+
+            // small number literals
             "ZRO" => Some(box |this| {
                 this.vars[this.primary] = Value::num(0.0)
             }),
@@ -110,6 +133,34 @@ impl Babble {
             "TEN" => Some(box |this| {
                 this.vars[this.primary] = Value::num(10.0)
             }),
+
+            // math ...........................................................
+
+            // basic arithmetic
+            "ADD" => Some(box |this| {
+                this.vars[this.result] = Value::Num(
+                    match this.vars[this.primary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    } + match this.vars[this.secondary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    });
+            }),
+            "SUB" => Some(box |this| {
+                this.vars[this.result] = Value::Num(
+                    match this.vars[this.primary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    } - match this.vars[this.secondary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    });
+            }),
+
+            // I/O ............................................................
+
+            // stdin/stdout
             "PUT" => Some(box |this| {
                 match this.vars[this.primary] {
                     Value::Num(ref n) => print!("{}", n),
@@ -129,6 +180,9 @@ impl Babble {
                     Value::Block(_) => warn!("PUT called on block ignored")
                 }
             }),
+
+            // if we run out of chars or if the function is unknown, ignore
+
             _ => None
         }
     }
@@ -172,6 +226,8 @@ impl Babble {
         })
     }
 
+    // convert an uppercase character to its index in the alphabet, 0-indexed
+    // A=0, B=1, etc.
     fn letter_idx(ch: char) -> usize {
         (ch as usize) - 65
     }
