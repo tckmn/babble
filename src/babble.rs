@@ -5,7 +5,7 @@ use self::num::traits::ToPrimitive;
 
 // adapted from @Shepmaster's code here:
 // http://stackoverflow.com/a/27590832/1223693
-use std::io::Write;
+use std::io::prelude::*;
 macro_rules! warn(
     ($($arg:tt)*) => { {
         write!(&mut ::std::io::stderr(), "warn: ").unwrap();
@@ -24,8 +24,9 @@ macro_rules! rfloat(
     )
 );
 
-pub struct Babble {
-    primary: usize, secondary: usize, result: usize, vars: [Value; 26]
+pub struct Babble<'a> {
+    primary: usize, secondary: usize, result: usize, vars: [Value; 26],
+    pub stdout: &'a mut Write, pub stdin: &'a mut Read
 }
 
 #[derive(Clone)]
@@ -38,8 +39,8 @@ impl Value {
     }
 }
 
-impl Babble {
-    pub fn new() -> Babble {
+impl<'a> Babble<'a> {
+    pub fn new(stdout: &'a mut Write, stdin: &'a mut Read) -> Babble<'a> {
         Babble {
             primary: 0, secondary: 1, result: 2,
             vars: [Value::num(0.0), Value::num(0.0), Value::num(0.0),
@@ -50,7 +51,8 @@ impl Babble {
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
-                   Value::num(0.0), Value::num(0.0)]
+                   Value::num(0.0), Value::num(0.0)],
+            stdout: stdout, stdin: stdin
         }
     }
 
@@ -170,7 +172,7 @@ impl Babble {
                             while val != rint!(0) {
                                 let byte = (val.clone() % rint!(256))
                                     .to_integer().to_u8().unwrap();
-                                ::std::io::stdout().write(&[byte]).unwrap();
+                                this.stdout.write(&[byte]).unwrap();
                                 val = (val / rint!(256)).floor();
                             }
                         },
