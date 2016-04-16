@@ -129,6 +129,9 @@ impl Babble {
             // block literals
             "BLK" => Babble::parse_literal_block(&mut code),
 
+            // arbitrarily sized number literals
+            "NUM" => Babble::parse_literal_num(&mut code),
+
             // small number literals
             "ZRO" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(0.0)
@@ -183,6 +186,26 @@ impl Babble {
                         Value::Num(ref n) => n.clone(),
                         _ => rint!(0)
                     } - match this.vars[this.secondary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    });
+            })),
+            "MUL" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    match this.vars[this.primary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    } * match this.vars[this.secondary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    });
+            })),
+            "DIV" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    match this.vars[this.primary] {
+                        Value::Num(ref n) => n.clone(),
+                        _ => rint!(0)
+                    } / match this.vars[this.secondary] {
                         Value::Num(ref n) => n.clone(),
                         _ => rint!(0)
                     });
@@ -247,8 +270,8 @@ impl Babble {
                                   else { return None };
                         let ch4 = if let Some(x) = code.next() { x }
                                   else { return None };
-                        arr.push(Value::num((Babble::letter_idx(ch3) * 25 +
-                                             Babble::letter_idx(ch4)) as f64));
+                        arr.push(Value::Num(Babble::from_letter_base(
+                                    vec![ch3, ch4])));
                     },
                     // ZZ: a literal Z character
                     'Z' => arr.push(Value::num('Z' as u8 as f64)),
@@ -283,10 +306,65 @@ impl Babble {
         }))
     }
 
+    fn parse_literal_num(mut code: &mut BabbleCodeIterator)
+            -> Option<Rc<Fn(&mut Babble, &mut Write, &mut Read)>> {
+        let mut digits1: Option<Vec<char>> = None;
+        let mut digits2: Option<Vec<char>> = None;
+        let mut num_zs = 0;
+
+        while let Some(ch) = code.next() {
+            if ch == 'Z' {
+                if digits1.is_none() {
+                    // if digits1 is still none, we're still counting Zs
+                    num_zs += 1;
+                } else if num_zs >= 2 && digits2.is_none() {
+                    // if we have 2 or more preceding Zs, start the denominator
+                    digits2 = Some(Vec::new());
+                } else {
+                    // otherwise, this marks the end of the literal
+                    break;
+                }
+            } else {
+                if let Some(ref mut digits) = digits2 {
+                    digits.push(ch);
+                } else {
+                    if let Some(ref mut digits) = digits1 {
+                        digits.push(ch);
+                    } else {
+                        digits1 = Some(vec![ch]);
+                    }
+                }
+            }
+        }
+
+        let numer = digits1.map_or(rint!(0), |x| Babble::from_letter_base(x))
+            * if num_zs % 2 == 0 { rint!(1) } else { rint!(-1) };
+        let denom = digits2.map_or(rint!(1), |x| Babble::from_letter_base(x));
+
+        let result = numer / denom;
+
+        Some(Rc::new(move |this, _, _| {
+            this.vars[this.primary] = Value::Num(result.to_owned());
+        }))
+    }
+
     // convert an uppercase character to its index in the alphabet, 0-indexed
     // A=0, B=1, etc.
     fn letter_idx(ch: char) -> usize {
         (ch as usize) - 65
+    }
+
+    // convert a Vec of digits in "letter base" (A..Y) to a number
+    fn from_letter_base(digits: Vec<char>) -> Rational {
+        let mut num = rint!(0);
+        let mut mult = rint!(1);
+
+        for &digit in digits.iter().rev() {
+            num = num + rint!(Babble::letter_idx(digit)) * mult.clone();
+            mult = mult * rint!(25);
+        }
+
+        num
     }
 }
 

@@ -13,12 +13,18 @@ fn run(code: String) -> String {
 }
 
 #[test]
-fn test_hello_world() {
+fn test_literals() {
     assert_eq!(String::from("Hello, World!"), run(String::from("ARRHZLEZLLZLLZLOZTBTZTBHWZLOZLRZLLZLDZTBIZEPUT")));
+    assert_eq!(String::from("27"), run(String::from("NUMABCZPUT")));
+    assert_eq!(String::from("-1980"), run(String::from("NUMZDEFZPUT")));
+    assert_eq!(String::from("437/654"), run(String::from("NUMZZGHIZJKLZPUT")));
+    assert_eq!(String::from("-871/1088"), run(String::from("NUMZZZMNOZPQRZPUT")));
 }
 
 #[test]
 fn test_math() {
     assert_eq!(String::from("3"), run(String::from("ONEPVBTWOPVAADDPVCPUT")));
     assert_eq!(String::from("3"), run(String::from("FIVPVBTWOPVASUBPVCPUT")));
+    assert_eq!(String::from("25"), run(String::from("FIVSVARVAMULPUT")));
+    assert_eq!(String::from("2"), run(String::from("TENPVBFIVPVADIVPVCPUT")));
 }
