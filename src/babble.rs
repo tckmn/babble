@@ -1,3 +1,4 @@
+// numeric types
 extern crate num;
 use self::num::rational::BigRational as Rational;
 use self::num::bigint::BigInt;
@@ -13,6 +14,7 @@ macro_rules! warn(
     } }
 );
 
+// create a Rational from an int/float respectively
 macro_rules! rint(
     ($x:expr) => (
         Rational::from_integer(BigInt::from($x))
@@ -24,10 +26,12 @@ macro_rules! rfloat(
     )
 );
 
+// the publicly exposed interface
 pub struct Babble {
     primary: usize, secondary: usize, result: usize, vars: [Value; 26]
 }
 
+// a Value is anything that a variable can be set to
 #[derive(Clone)]
 enum Value {
     Num(Rational), Arr(Vec<Value>), Block(String)
@@ -38,7 +42,10 @@ impl Value {
     }
 }
 
+// methods of the main Babble struct
 impl Babble {
+
+    // default constructor, initializing all variables
     pub fn new() -> Babble {
         Babble {
             primary: 0, secondary: 1, result: 2,
@@ -54,11 +61,13 @@ impl Babble {
         }
     }
 
+    // run Babble code, using STDOUT and STDIN as I/O
     pub fn run(&mut self, code: String) {
         let (mut stdout, mut stdin) = (::std::io::stdout(), ::std::io::stdin());
         self.run_with_io(code, &mut stdout, &mut stdin);
     }
 
+    // run Babble code, but manually specify I/O interfaces
     pub fn run_with_io(&mut self, code: String,
                        stdout: &mut Write, stdin: &mut Read) {
         for token in Babble::tokenize(code) {
@@ -66,18 +75,23 @@ impl Babble {
         }
     }
 
-    fn tokenize(code: String) -> Vec<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
+    // private function that turns a string of code into a Vec of the functions
+    // that the string represents
+    fn tokenize(code: String) -> Vec<Box<Fn(&mut Babble, &mut Write,
+                                            &mut Read)>> {
         let mut tokens = Vec::new();
         let mut code_iter = BabbleCodeIterator::new(code);
+
         while let Some(token) = Babble::parse(&mut code_iter) {
             tokens.push(token);
         }
+
         tokens
     }
 
+    // this is the top-level parsing function, the "normal" parsing mode
     fn parse(mut code: &mut BabbleCodeIterator)
             -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
-        // this is the top-level parsing function. In normal parsing mode, we
         // simply grab three letters and go from there
         let cmd: String = code.take(3).collect();
 
@@ -99,6 +113,7 @@ impl Babble {
             });
         }
 
+        // a HUGE switch statement...
         match &cmd[..] {
             // literals .......................................................
 
@@ -169,7 +184,9 @@ impl Babble {
             // stdin/stdout
             "PUT" => Some(box |this, stdout, _| {
                 match this.vars[this.primary] {
+                    // for numbers, simply output the number
                     Value::Num(ref n) => print!("{}", n),
+                    // for arrays, treat them as arrays of ASCII codes
                     Value::Arr(ref a) => for v in a { match v {
                         &Value::Num(ref n) => {
                             let mut val = n.clone();
@@ -183,20 +200,24 @@ impl Babble {
                         _ => warn!("PUT called on array with ignored \
                                    non-Num element")
                     } },
+                    // doesn't make sense to PUT a block
                     Value::Block(_) => warn!("PUT called on block ignored")
                 }
             }),
 
-            // if we run out of chars or if the function is unknown, ignore
+            // if we run out of chars or if the function is unknown, ignore ...
 
             _ => None
         }
     }
 
+    // when we encounter "ARR", this sub-parsing function is called, which
+    // consumes the code iterator until the ending sequence (ZE)
     fn parse_literal_array(mut code: &mut BabbleCodeIterator)
             -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
         let mut arr: Vec<Value> = Vec::new();
 
+        // I am good at naming loops
         'loopy: loop {
             let ch = if let Some(x) = code.next() { x } else { return None };
             if ch == 'Z' {
@@ -227,6 +248,7 @@ impl Babble {
             }
         }
 
+        // return the array as a function that sets the primary variable
         Some(box move |this, _, _| {
             this.vars[this.primary] = Value::Arr(arr.to_owned());
         })
@@ -239,6 +261,7 @@ impl Babble {
     }
 }
 
+// a custom iterator through the characters of a Babble program
 struct BabbleCodeIterator { code: Vec<char> }
 impl BabbleCodeIterator {
     fn new(code: String) -> BabbleCodeIterator {

@@ -3,6 +3,7 @@
 extern crate babble;
 use babble::babble::Babble;
 
+// a utility function to run code as a string and return its STDOUT
 fn run(code: String) -> String {
     let mut stdout: Vec<u8> = Vec::new();
     let mut stdin = ::std::io::empty();
