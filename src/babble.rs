@@ -24,9 +24,8 @@ macro_rules! rfloat(
     )
 );
 
-pub struct Babble<'a> {
-    primary: usize, secondary: usize, result: usize, vars: [Value; 26],
-    pub stdout: &'a mut Write, pub stdin: &'a mut Read
+pub struct Babble {
+    primary: usize, secondary: usize, result: usize, vars: [Value; 26]
 }
 
 #[derive(Clone)]
@@ -39,8 +38,8 @@ impl Value {
     }
 }
 
-impl<'a> Babble<'a> {
-    pub fn new(stdout: &'a mut Write, stdin: &'a mut Read) -> Babble<'a> {
+impl Babble {
+    pub fn new() -> Babble {
         Babble {
             primary: 0, secondary: 1, result: 2,
             vars: [Value::num(0.0), Value::num(0.0), Value::num(0.0),
@@ -51,18 +50,23 @@ impl<'a> Babble<'a> {
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
                    Value::num(0.0), Value::num(0.0), Value::num(0.0),
-                   Value::num(0.0), Value::num(0.0)],
-            stdout: stdout, stdin: stdin
+                   Value::num(0.0), Value::num(0.0)]
         }
     }
 
     pub fn run(&mut self, code: String) {
+        let (mut stdout, mut stdin) = (::std::io::stdout(), ::std::io::stdin());
+        self.run_with_io(code, &mut stdout, &mut stdin);
+    }
+
+    pub fn run_with_io(&mut self, code: String,
+                       stdout: &mut Write, stdin: &mut Read) {
         for token in Babble::tokenize(code) {
-            token(self)
+            token(self, stdout, stdin)
         }
     }
 
-    fn tokenize(code: String) -> Vec<Box<Fn(&mut Babble)>> {
+    fn tokenize(code: String) -> Vec<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
         let mut tokens = Vec::new();
         let mut code_iter = BabbleCodeIterator::new(code);
         while let Some(token) = Babble::parse(&mut code_iter) {
@@ -72,7 +76,7 @@ impl<'a> Babble<'a> {
     }
 
     fn parse(mut code: &mut BabbleCodeIterator)
-            -> Option<Box<Fn(&mut Babble)>> {
+            -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
         // this is the top-level parsing function. In normal parsing mode, we
         // simply grab three letters and go from there
         let cmd: String = code.take(3).collect();
@@ -80,17 +84,17 @@ impl<'a> Babble<'a> {
         // check for primary, secondary, or result variable setting commands
         if cmd.starts_with("PV") {
             let pv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this| {
+            return Some(box move |this, _, _| {
                 this.primary = pv;
             });
         } else if cmd.starts_with("SV") {
             let sv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this| {
+            return Some(box move |this, _, _| {
                 this.secondary = sv;
             });
         } else if cmd.starts_with("RV") {
             let rv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this| {
+            return Some(box move |this, _, _| {
                 this.result = rv;
             });
         }
@@ -102,44 +106,44 @@ impl<'a> Babble<'a> {
             "ARR" => Babble::parse_literal_array(&mut code),
 
             // small number literals
-            "ZRO" => Some(box |this| {
+            "ZRO" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(0.0)
             }),
-            "ONE" => Some(box |this| {
+            "ONE" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(1.0)
             }),
-            "TWO" => Some(box |this| {
+            "TWO" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(2.0)
             }),
-            "TRE" => Some(box |this| {
+            "TRE" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(3.0)
             }),
-            "FOR" => Some(box |this| {
+            "FOR" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(4.0)
             }),
-            "FIV" => Some(box |this| {
+            "FIV" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(5.0)
             }),
-            "SIX" => Some(box |this| {
+            "SIX" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(6.0)
             }),
-            "SVN" => Some(box |this| {
+            "SVN" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(7.0)
             }),
-            "EGT" => Some(box |this| {
+            "EGT" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(8.0)
             }),
-            "NIN" => Some(box |this| {
+            "NIN" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(9.0)
             }),
-            "TEN" => Some(box |this| {
+            "TEN" => Some(box |this, _, _| {
                 this.vars[this.primary] = Value::num(10.0)
             }),
 
             // math ...........................................................
 
             // basic arithmetic
-            "ADD" => Some(box |this| {
+            "ADD" => Some(box |this, _, _| {
                 this.vars[this.result] = Value::Num(
                     match this.vars[this.primary] {
                         Value::Num(ref n) => n.clone(),
@@ -149,7 +153,7 @@ impl<'a> Babble<'a> {
                         _ => rint!(0)
                     });
             }),
-            "SUB" => Some(box |this| {
+            "SUB" => Some(box |this, _, _| {
                 this.vars[this.result] = Value::Num(
                     match this.vars[this.primary] {
                         Value::Num(ref n) => n.clone(),
@@ -163,7 +167,7 @@ impl<'a> Babble<'a> {
             // I/O ............................................................
 
             // stdin/stdout
-            "PUT" => Some(box |this| {
+            "PUT" => Some(box |this, stdout, _| {
                 match this.vars[this.primary] {
                     Value::Num(ref n) => print!("{}", n),
                     Value::Arr(ref a) => for v in a { match v {
@@ -172,7 +176,7 @@ impl<'a> Babble<'a> {
                             while val != rint!(0) {
                                 let byte = (val.clone() % rint!(256))
                                     .to_integer().to_u8().unwrap();
-                                this.stdout.write(&[byte]).unwrap();
+                                stdout.write(&[byte]).unwrap();
                                 val = (val / rint!(256)).floor();
                             }
                         },
@@ -190,7 +194,7 @@ impl<'a> Babble<'a> {
     }
 
     fn parse_literal_array(mut code: &mut BabbleCodeIterator)
-            -> Option<Box<Fn(&mut Babble)>> {
+            -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
         let mut arr: Vec<Value> = Vec::new();
 
         'loopy: loop {
@@ -223,7 +227,7 @@ impl<'a> Babble<'a> {
             }
         }
 
-        Some(box move |this| {
+        Some(box move |this, _, _| {
             this.vars[this.primary] = Value::Arr(arr.to_owned());
         })
     }
