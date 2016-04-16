@@ -5,3 +5,4 @@ authors = ["KeyboardFire <andy@keyboardfire.com>"]
 
 [dependencies]
 num = "0.1.31"
+getopts = "0.2.14"
