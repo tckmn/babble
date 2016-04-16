@@ -4,6 +4,8 @@ use self::num::rational::BigRational as Rational;
 use self::num::bigint::BigInt;
 use self::num::traits::ToPrimitive;
 
+use std::rc::Rc;
+
 // adapted from @Shepmaster's code here:
 // http://stackoverflow.com/a/27590832/1223693
 use std::io::prelude::*;
@@ -34,7 +36,8 @@ pub struct Babble {
 // a Value is anything that a variable can be set to
 #[derive(Clone)]
 enum Value {
-    Num(Rational), Arr(Vec<Value>), Block(String)
+    Num(Rational), Arr(Vec<Value>),
+    Block(Vec<Rc<Fn(&mut Babble, &mut Write, &mut Read)>>)
 }
 impl Value {
     fn num(f: f64) -> Value {
@@ -77,8 +80,8 @@ impl Babble {
 
     // private function that turns a string of code into a Vec of the functions
     // that the string represents
-    fn tokenize(code: String) -> Vec<Box<Fn(&mut Babble, &mut Write,
-                                            &mut Read)>> {
+    fn tokenize(code: String) -> Vec<Rc<Fn(&mut Babble, &mut Write,
+                                           &mut Read)>> {
         let mut tokens = Vec::new();
         let mut code_iter = BabbleCodeIterator::new(code);
 
@@ -91,74 +94,80 @@ impl Babble {
 
     // this is the top-level parsing function, the "normal" parsing mode
     fn parse(mut code: &mut BabbleCodeIterator)
-            -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
+            -> Option<Rc<Fn(&mut Babble, &mut Write, &mut Read)>> {
         // simply grab three letters and go from there
         let cmd: String = code.take(3).collect();
+
+        // have we run out of characters?
+        if cmd.len() < 3 { return None; }
 
         // check for primary, secondary, or result variable setting commands
         if cmd.starts_with("PV") {
             let pv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this, _, _| {
+            return Some(Rc::new(move |this, _, _| {
                 this.primary = pv;
-            });
+            }));
         } else if cmd.starts_with("SV") {
             let sv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this, _, _| {
+            return Some(Rc::new(move |this, _, _| {
                 this.secondary = sv;
-            });
+            }));
         } else if cmd.starts_with("RV") {
             let rv = Babble::letter_idx(cmd.chars().last().unwrap());
-            return Some(box move |this, _, _| {
+            return Some(Rc::new(move |this, _, _| {
                 this.result = rv;
-            });
+            }));
         }
 
         // a HUGE switch statement...
         match &cmd[..] {
             // literals .......................................................
 
-            // array / string literal
+            // array / string literals
             "ARR" => Babble::parse_literal_array(&mut code),
 
+            // block literals
+            "BLK" => Babble::parse_literal_block(&mut code),
+
             // small number literals
-            "ZRO" => Some(box |this, _, _| {
+            "ZRO" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(0.0)
-            }),
-            "ONE" => Some(box |this, _, _| {
+            })),
+            "ONE" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(1.0)
-            }),
-            "TWO" => Some(box |this, _, _| {
+            })),
+            "TWO" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(2.0)
-            }),
-            "TRE" => Some(box |this, _, _| {
+            })),
+            "TRE" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(3.0)
-            }),
-            "FOR" => Some(box |this, _, _| {
+            })),
+            "FOR" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(4.0)
-            }),
-            "FIV" => Some(box |this, _, _| {
+            })),
+            "FIV" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(5.0)
-            }),
-            "SIX" => Some(box |this, _, _| {
+            })),
+            "SIX" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(6.0)
-            }),
-            "SVN" => Some(box |this, _, _| {
+            })),
+            "SVN" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(7.0)
-            }),
-            "EGT" => Some(box |this, _, _| {
+            })),
+            "EGT" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(8.0)
-            }),
-            "NIN" => Some(box |this, _, _| {
+            })),
+            "NIN" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(9.0)
-            }),
-            "TEN" => Some(box |this, _, _| {
+            })),
+            "TEN" => Some(Rc::new(|this, _, _| {
                 this.vars[this.primary] = Value::num(10.0)
-            }),
+            })),
 
             // math ...........................................................
 
             // basic arithmetic
-            "ADD" => Some(box |this, _, _| {
+            "ADD" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
                     match this.vars[this.primary] {
                         Value::Num(ref n) => n.clone(),
@@ -167,8 +176,8 @@ impl Babble {
                         Value::Num(ref n) => n.clone(),
                         _ => rint!(0)
                     });
-            }),
-            "SUB" => Some(box |this, _, _| {
+            })),
+            "SUB" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
                     match this.vars[this.primary] {
                         Value::Num(ref n) => n.clone(),
@@ -177,12 +186,12 @@ impl Babble {
                         Value::Num(ref n) => n.clone(),
                         _ => rint!(0)
                     });
-            }),
+            })),
 
             // I/O ............................................................
 
             // stdin/stdout
-            "PUT" => Some(box |this, stdout, _| {
+            "PUT" => Some(Rc::new(|this, stdout, _| {
                 match this.vars[this.primary] {
                     // for numbers, simply output the number
                     Value::Num(ref n) => {
@@ -205,18 +214,18 @@ impl Babble {
                     // doesn't make sense to PUT a block
                     Value::Block(_) => warn!("PUT called on block ignored")
                 }
-            }),
+            })),
 
-            // if we run out of chars or if the function is unknown, ignore ...
+            // if the function is unknown, ignore .............................
 
-            _ => None
+            _ => Some(Rc::new(|_, _, _| {}))
         }
     }
 
     // when we encounter "ARR", this sub-parsing function is called, which
     // consumes the code iterator until the ending sequence (ZE)
     fn parse_literal_array(mut code: &mut BabbleCodeIterator)
-            -> Option<Box<Fn(&mut Babble, &mut Write, &mut Read)>> {
+            -> Option<Rc<Fn(&mut Babble, &mut Write, &mut Read)>> {
         let mut arr: Vec<Value> = Vec::new();
 
         // I am good at naming loops
@@ -251,9 +260,24 @@ impl Babble {
         }
 
         // return the array as a function that sets the primary variable
-        Some(box move |this, _, _| {
+        Some(Rc::new(move |this, _, _| {
             this.vars[this.primary] = Value::Arr(arr.to_owned());
-        })
+        }))
+    }
+
+    fn parse_literal_block(mut code: &mut BabbleCodeIterator)
+            -> Option<Rc<Fn(&mut Babble, &mut Write, &mut Read)>> {
+        let mut tokens = Vec::new();
+
+        while !code.is_ending() {
+            if let Some(token) = Babble::parse(&mut code) {
+                tokens.push(token);
+            } else { break; }
+        }
+
+        Some(Rc::new(move |this, _, _| {
+            this.vars[this.primary] = Value::Block(tokens.to_owned());
+        }))
     }
 
     // convert an uppercase character to its index in the alphabet, 0-indexed
@@ -276,5 +300,10 @@ impl Iterator for BabbleCodeIterator {
     type Item = char;
     fn next(&mut self) -> Option<char> {
         self.code.pop()
+    }
+}
+impl BabbleCodeIterator {
+    fn is_ending(&self) -> bool {
+        self.code.ends_with(&['D','N','E'])
     }
 }

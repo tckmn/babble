@@ -1,5 +1,3 @@
-#![feature(box_syntax)]
-
 extern crate babble;
 use babble::babble::Babble;
 
@@ -27,9 +25,9 @@ fn main() {
         b.run(code);
     } else {
         let mut stream: Box<Read> = if matches.free.is_empty() {
-            box ::std::io::stdin()
+            Box::new(::std::io::stdin())
         } else {
-            box File::open(matches.free[0].clone()).unwrap()
+            Box::new(File::open(matches.free[0].clone()).unwrap())
         };
         let mut code = String::new();
         stream.read_to_string(&mut code).unwrap();
