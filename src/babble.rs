@@ -185,7 +185,9 @@ impl Babble {
             "PUT" => Some(box |this, stdout, _| {
                 match this.vars[this.primary] {
                     // for numbers, simply output the number
-                    Value::Num(ref n) => print!("{}", n),
+                    Value::Num(ref n) => {
+                        write!(stdout, "{}", n).unwrap();
+                    },
                     // for arrays, treat them as arrays of ASCII codes
                     Value::Arr(ref a) => for v in a { match v {
                         &Value::Num(ref n) => {
