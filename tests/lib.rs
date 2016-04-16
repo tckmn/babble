@@ -16,3 +16,9 @@ fn run(code: String) -> String {
 fn test_hello_world() {
     assert_eq!(String::from("Hello, World!"), run(String::from("ARRHZLEZLLZLLZLOZTBTZTBHWZLOZLRZLLZLDZTBIZEPUT")));
 }
+
+#[test]
+fn test_math() {
+    assert_eq!(String::from("3"), run(String::from("ONEPVBTWOPVAADDPVCPUT")));
+    assert_eq!(String::from("3"), run(String::from("FIVPVBTWOPVASUBPVCPUT")));
+}
