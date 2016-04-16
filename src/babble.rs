@@ -275,6 +275,9 @@ impl Babble {
             } else { break; }
         }
 
+        // consume the END
+        for _ in code.take(3) {}
+
         Some(Rc::new(move |this, _, _| {
             this.vars[this.primary] = Value::Block(tokens.to_owned());
         }))
