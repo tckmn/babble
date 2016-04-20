@@ -44,6 +44,20 @@ impl Value {
         Value::Num(rfloat!(f))
     }
 }
+impl From<Value> for bool {
+    fn from(val: Value) -> bool {
+        bool::from(&val)
+    }
+}
+impl<'a> From<&'a Value> for bool {
+    fn from(val: &'a Value) -> bool {
+        match val {
+            &Value::Num(ref n) => *n != rint!(0),
+            &Value::Arr(ref a) => !a.is_empty(),
+            &Value::Block(ref b) => !b.is_empty()
+        }
+    }
+}
 
 // methods of the main Babble struct
 impl Babble {
@@ -121,6 +135,16 @@ impl Babble {
 
         // a HUGE switch statement...
         match &cmd[..] {
+            "XPS" => Some(Rc::new(|this, _, _| {
+                this.vars.swap(this.primary, this.secondary);
+            })),
+            "XPR" => Some(Rc::new(|this, _, _| {
+                this.vars.swap(this.primary, this.result);
+            })),
+            "XSR" => Some(Rc::new(|this, _, _| {
+                this.vars.swap(this.secondary, this.result);
+            })),
+
             // literals .......................................................
 
             // array / string literals
@@ -209,6 +233,26 @@ impl Babble {
                         Value::Num(ref n) => n.clone(),
                         _ => rint!(0)
                     });
+            })),
+
+            // block operators ................................................
+
+            // control flow
+            "WHL" => Some(Rc::new(|this, stdout, stdin| {
+                let condition = match this.vars[this.primary] {
+                    Value::Block(ref b) => b.clone(),
+                    _ => vec![]
+                };
+                let statement = match this.vars[this.secondary] {
+                    Value::Block(ref b) => b.clone(),
+                    _ => vec![]
+                };
+                while {
+                    for token in condition.iter() { token(this, stdout, stdin) }
+                    bool::from(&this.vars[this.result])
+                } {
+                    for token in statement.iter() { token(this, stdout, stdin) }
+                }
             })),
 
             // I/O ............................................................

@@ -28,3 +28,8 @@ fn test_math() {
     assert_eq!(String::from("25"), run(String::from("FIVSVARVAMULPUT")));
     assert_eq!(String::from("2"), run(String::from("TENPVBFIVPVADIVPVCPUT")));
 }
+
+#[test]
+fn test_control_flow() {
+    assert_eq!(String::from("10987654321"), run(String::from("ONEXPSTENXPRBLKXPRPUTSUBENDWHL")));
+}
