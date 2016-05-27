@@ -1,0 +1,32 @@
+Here, ? represents any letter from A to Z, P represents the primary variable, S represents the secondary variable, and R represents the result variable.
+
+PV?: Sets the pointer of P to ?.
+SV?: Sets the pointer of S to ?.
+RV?: Sets the pointer of R to ?.
+
+XPS: Swaps P and S.
+XPR: Swaps P and R.
+XSR: Swaps S and R.
+
+ARR: Parse the codes that follow as an array, until terminated by ZE.
+BLK: Parse the codes that follow as a block.
+NUM: Parse the codes that follow as a number.
+
+ZRO: Sets P to 0.
+ONE: Sets P to 1.
+TWO: Sets P to 2.
+TRE: Sets P to 3.
+FOR: Sets P to 4.
+FIV: Sets P to 5.
+SIX: Sets P to 6.
+SVN: Sets P to 7.
+EGT: Sets P to 8.
+NIN: Sets P to 9.
+TEN: Sets P to 10.
+
+ADD: R = P + S
+SUB: R = P - S
+MUL: R = P * S
+DIV: R = P / S
+
+WHL: While P, S.
