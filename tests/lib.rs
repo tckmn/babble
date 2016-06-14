@@ -1,13 +1,12 @@
 #![feature(box_syntax)]
 
 extern crate babble;
-use babble::babble::Babble;
 
 // a utility function to run code as a string and return its STDOUT
 fn run(code: String) -> String {
     let mut stdout: Vec<u8> = Vec::new();
     let mut stdin = ::std::io::empty();
-    let mut b = Babble::new();
+    let mut b = babble::Babble::new();
     b.run_with_io(code, &mut stdout, &mut stdin);
     String::from_utf8(stdout).unwrap()
 }

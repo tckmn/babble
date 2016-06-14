@@ -1,5 +1,4 @@
 extern crate babble;
-use babble::babble::Babble;
 
 extern crate getopts;
 use getopts::Options;
@@ -10,7 +9,7 @@ use std::io;
 use std::fs::File;
 
 fn main() {
-    let mut b = Babble::new();
+    let mut b = babble::Babble::new();
 
     let args: Vec<String> = env::args().collect();
     let mut opts = Options::new();
