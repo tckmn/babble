@@ -5,6 +5,7 @@ extern crate num;
 use self::num::rational::BigRational as Rational;
 use self::num::bigint::BigInt;
 use self::num::traits::ToPrimitive;
+use self::num::traits::Signed;
 
 use std::rc::Rc;
 
@@ -198,43 +199,64 @@ impl Babble {
             // basic arithmetic
             "ADD" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
-                    match this.vars[this.primary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    } + match this.vars[this.secondary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    });
+                    this.get_num(this.primary) + this.get_num(this.secondary));
             })),
             "SUB" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
-                    match this.vars[this.primary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    } - match this.vars[this.secondary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    });
+                    this.get_num(this.primary) - this.get_num(this.secondary));
             })),
             "MUL" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
-                    match this.vars[this.primary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    } * match this.vars[this.secondary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    });
+                    this.get_num(this.primary) * this.get_num(this.secondary));
             })),
             "DIV" => Some(Rc::new(|this, _, _| {
                 this.vars[this.result] = Value::Num(
-                    match this.vars[this.primary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    } / match this.vars[this.secondary] {
-                        Value::Num(ref n) => n.clone(),
-                        _ => rint!(0)
-                    });
+                    this.get_num(this.primary) / this.get_num(this.secondary));
+            })),
+            "POW" => Some(Rc::new(|this, _, _| {
+                //this.vars[this.result] = Value::Num(
+                //    num::pow(this.get_num(this.primary).pow(this.get_num(this.secondary)));
+            })),
+
+            // other basic math operators
+            "ABS" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    this.get_num(this.primary).abs());
+            })),
+            "FLO" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    this.get_num(this.primary).floor());
+            })),
+            "CEI" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    this.get_num(this.primary).ceil());
+            })),
+            "ROU" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    this.get_num(this.primary).round());
+            })),
+            "LTH" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    if this.get_num(this.primary) < this.get_num(this.secondary)
+                    { rint!(1) } else { rint!(0) });
+            })),
+            "GTH" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    if this.get_num(this.primary) > this.get_num(this.secondary)
+                    { rint!(1) } else { rint!(0) });
+            })),
+            "LTE" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    if this.get_num(this.primary) <= this.get_num(this.secondary)
+                    { rint!(1) } else { rint!(0) });
+            })),
+            "GTE" => Some(Rc::new(|this, _, _| {
+                this.vars[this.result] = Value::Num(
+                    if this.get_num(this.primary) >= this.get_num(this.secondary)
+                    { rint!(1) } else { rint!(0) });
+            })),
+            "RNG" => Some(Rc::new(|this, _, _| {
+                // TODO range
             })),
 
             // block operators ................................................
@@ -411,6 +433,13 @@ impl Babble {
         }
 
         num
+    }
+
+    fn get_num(&self, var: usize) -> Rational {
+        match self.vars[var] {
+            Value::Num(ref x) => x.clone(),
+            _ => rint!(0)
+        }
     }
 }
 
