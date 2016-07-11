@@ -280,6 +280,22 @@ impl Babble {
                     for token in statement.iter() { token(this, stdout, stdin) }
                 }
             })),
+            "XIF" => Some(Rc::new(|this, stdout, stdin| {
+                let condition = match this.vars[this.primary] {
+                    Value::Block(ref b) => b.clone(),
+                    _ => vec![]
+                };
+                let statement = match this.vars[this.secondary] {
+                    Value::Block(ref b) => b.clone(),
+                    _ => vec![]
+                };
+                if {
+                    for token in condition.iter() { token(this, stdout, stdin) }
+                    bool::from(&this.vars[this.result])
+                } {
+                    for token in statement.iter() { token(this, stdout, stdin) }
+                }
+            })),
 
             // I/O ............................................................
 

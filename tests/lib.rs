@@ -32,4 +32,5 @@ fn test_math() {
 #[test]
 fn test_control_flow() {
     assert_eq!(String::from("10987654321"), run(String::from("ONEXPSTENXPRBLKXPRPUTSUBENDWHL")));
+    assert_eq!(String::from("10"), run(String::from("ONEXPSTENXPRBLKXPRPUTSUBENDXIF")));
 }
