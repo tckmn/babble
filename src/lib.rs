@@ -214,8 +214,10 @@ impl Babble {
                     this.get_num(this.primary) / this.get_num(this.secondary));
             })),
             "POW" => Some(Rc::new(|this, _, _| {
-                //this.vars[this.result] = Value::Num(
-                //    num::pow(this.get_num(this.primary).pow(this.get_num(this.secondary)));
+                // TODO don't unwrap()
+                this.vars[this.result] = Value::num(
+                    this.get_f64(this.primary).unwrap().powf(
+                        this.get_f64(this.secondary).unwrap()));
             })),
 
             // other basic math operators
@@ -440,6 +442,13 @@ impl Babble {
             Value::Num(ref x) => x.clone(),
             _ => rint!(0)
         }
+    }
+
+    fn get_f64(&self, var: usize) -> Option<f64> {
+        let num = self.get_num(var);
+        let numer = num.numer().to_f64();
+        let denom = num.denom().to_f64();
+        numer.and_then(|n| denom.and_then(|d| Some(n / d)))
     }
 }
 

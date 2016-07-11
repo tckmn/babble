@@ -26,6 +26,7 @@ fn test_math() {
     assert_eq!(String::from("3"), run(String::from("FIVPVBTWOPVASUBPVCPUT")));
     assert_eq!(String::from("25"), run(String::from("FIVSVARVAMULPUT")));
     assert_eq!(String::from("2"), run(String::from("TENPVBFIVPVADIVPVCPUT")));
+    assert_eq!(String::from("32"), run(String::from("TWOPVBFIVPVAPOWPVCPUT")));
 }
 
 #[test]
